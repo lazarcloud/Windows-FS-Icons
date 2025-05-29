@@ -1,0 +1,11 @@
+[package]
+name = "Windows-FS-Icons"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+usvg = "0.32"
+resvg = "0.32"
+image = "0.24"
+ico = "0.3"
+walkdir = "2.3"
