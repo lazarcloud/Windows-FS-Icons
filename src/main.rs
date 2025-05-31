@@ -1,10 +1,10 @@
 use ico::{IconDir, IconImage};
-use image::{DynamicImage, GenericImageView};
+use image::GenericImageView;
 use resvg::tiny_skia::Pixmap;
 use resvg::tiny_skia::Transform;
 use resvg::FitTo;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use usvg::TreeParsing;
 use usvg::{Options, Tree};
 use walkdir::WalkDir;
@@ -30,10 +30,12 @@ fn render_svg_to_png(svg_path: &Path, png_path: &Path) -> Result<(), Box<dyn std
     let options = Options::default();
     let rtree = Tree::from_data(&svg_data, &options)?;
     let svg_size = rtree.size;
-    let scale = (MAX_DIMENSION as f64 / svg_size.width())
-        .min(MAX_DIMENSION as f64 / svg_size.height()) as f64;
+
+    let scale =
+        (MAX_DIMENSION as f64 / svg_size.width()).min(MAX_DIMENSION as f64 / svg_size.height());
     let target_width = (svg_size.width() * scale).ceil() as u32;
     let target_height = (svg_size.height() * scale).ceil() as u32;
+
     let mut pixmap = Pixmap::new(target_width, target_height).ok_or("Failed to create pixmap")?;
     resvg::render(
         &rtree,
@@ -42,17 +44,26 @@ fn render_svg_to_png(svg_path: &Path, png_path: &Path) -> Result<(), Box<dyn std
         pixmap.as_mut(),
     )
     .ok_or("Failed to render SVG")?;
-    let img = DynamicImage::ImageRgba8(
-        image::RgbaImage::from_raw(target_width, target_height, pixmap.data().to_vec())
-            .ok_or("Failed to convert pixmap to image buffer")?,
-    );
+
+    let mut img = image::RgbaImage::from_raw(target_width, target_height, pixmap.data().to_vec())
+        .ok_or("Failed to convert pixmap to image buffer")?;
+
+    // Default windows color is #FFD358
+    for pixel in img.pixels_mut() {
+        if pixel[3] != 0 {
+            *pixel = image::Rgba([255, 211, 88, pixel[3]]);
+        }
+    }
+
     let mut square_img = image::RgbaImage::new(MAX_DIMENSION, MAX_DIMENSION);
     for pixel in square_img.pixels_mut() {
         *pixel = image::Rgba([0, 0, 0, 0]);
     }
+
     let x_offset = (MAX_DIMENSION - target_width) / 2;
     let y_offset = (MAX_DIMENSION - target_height) / 2;
     image::imageops::overlay(&mut square_img, &img, x_offset.into(), y_offset.into());
+
     square_img.save(png_path)?;
     Ok(())
 }
